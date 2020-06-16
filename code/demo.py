@@ -1,8 +1,6 @@
-from ewc import EWC_Network
+from model import EWC_Network
 import tensorflow as tf
 import numpy as np
-
-from ewc import EWC_Network
 
 print(tf.version)
 
