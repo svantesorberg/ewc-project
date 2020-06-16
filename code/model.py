@@ -23,12 +23,57 @@ class EWC_Network():
 
         self._build_model()
 
-    # TODO    
-    # This function will compute the ewc regularization terms for each task
-    # and add them together. Keras then combines this with the network's 
-    # loss function.
-    def ewc_regularizer(self, weights):
-        return 0 * tf.reduce_sum(tf.square(weights)) # Just a placeholder
+    # TODO
+    #
+    # This class represents the regularization function in EWC, i.e.
+    # the penalty term associated with the current parameters based 
+    # on how much they differ from previously trained parameters for 
+    # different tasks.
+    class EWC_Regularizer(tf.keras.regularizers.Regularizer):
+        def __init__(self, constant = 1):
+            self.constant = constant
+            self.trained_parameters_per_task = []
+        
+        def __call__(self, weights):
+            penalty = 0
+            
+            #tf.print(self.trained_parameters_per_task)
+            for params in self.trained_parameters_per_task:
+                penalty += self.constant * tf.reduce_sum(tf.square(weights - params)) # Just a placeholder
+            
+            return penalty
+
+        # Add new parameters to the vector, used when a new task
+        # has been learned
+        def add_new_parameters(self, parameters):
+            self.trained_parameters_per_task.append(parameters)
+
+        def get_constant(self):
+            return self.constant
+        
+        def set_constant(self, constant):
+            self.constant = constant
+        
+        
+
+    def update_regularization_functions(self):
+        # Updates the regularization functions for each layer,
+        # adding learned parameters for the most recently learned task
+        for i, layer in enumerate(self.model.layers):
+
+            # TESTING
+            layer.kernel_regularizer.set_constant(0.05)
+            layer.bias_regularizer.set_constant(0.05)
+
+            # Update weight parameters
+            new_parameters = self.tasks[-1]['trained_parameters'][2*i]
+            layer.kernel_regularizer.add_new_parameters(new_parameters)
+
+            # Update bias parameters
+            new_parameters = self.tasks[-1]['trained_parameters'][2*i + 1]
+            layer.bias_regularizer.add_new_parameters(new_parameters)
+        
+    
 
     # Build a fully connected network with two hidden layers
     # Currently static width = 400
@@ -38,23 +83,32 @@ class EWC_Network():
             tf.keras.layers.Dense(
                 400, 
                 activation='relu',
-                bias_regularizer=self.ewc_regularizer,
-                kernel_regularizer=self.ewc_regularizer,
+                bias_regularizer=self.EWC_Regularizer(),
+                kernel_regularizer=self.EWC_Regularizer(),
                 name='fc1'
             ),
             tf.keras.layers.Dense(
                 400, 
                 activation='relu', 
-                bias_regularizer=self.ewc_regularizer,
-                kernel_regularizer=self.ewc_regularizer, 
+                bias_regularizer=self.EWC_Regularizer(),
+                kernel_regularizer=self.EWC_Regularizer(), 
                 name='fc2'
             ),
             tf.keras.layers.Dense(
                 self.n_classes, 
-                activation='softmax', 
+                activation='softmax',
+                bias_regularizer=self.EWC_Regularizer(),
+                kernel_regularizer=self.EWC_Regularizer(), 
                 name='output')
         ])
 
+        self._compile_model()
+
+        print('Model built. Here is a summary:',end='\n\n')
+        self.model.summary(print_fn=lambda s: print('\t' + s))
+        print()
+
+    def _compile_model(self):
         self.model.compile(
             optimizer=tf.keras.optimizers.Adam(
                 learning_rate=self.learning_rate
@@ -62,10 +116,6 @@ class EWC_Network():
             loss='categorical_crossentropy',
             metrics=['accuracy']
         )
-
-        print('Model built. Here is a summary:',end='\n\n')
-        self.model.summary(print_fn=lambda s: print('\t' + s))
-        print()
 
     # Train models on the tasks specified in tasks vector
     # in the order that they are specified in task_ids)
@@ -86,9 +136,12 @@ class EWC_Network():
                 epochs = self.n_epochs,
                 batch_size=self.batch_size
             )
-
-            task['trained_weights'] = self.model.get_weights()
-        
+            
+            task['trained_parameters'] = self.model.get_weights()
+            # After model has been trained, we need to recompile it
+            # in order to use the updated the regularization function
+            self.update_regularization_functions()
+            self._compile_model()
 
     def add_task(
         self, 
@@ -128,8 +181,10 @@ class EWC_Network():
         for task_id in task_ids:
             task=self.tasks[task_id]
             assert(task_id == task['meta']['id'])
+            print('Evaluating task', get_name_or_id(task))
             loss, accuracy = self.model.evaluate(task['X_test'], task['Y_test'])
-            print(
-                'Task', get_name_or_id(task), 
-                'test accuracy:', accuracy, 
-                'loss:', loss)
+            #print(
+            #    'Task', get_name_or_id(task), 
+            #    'test accuracy:', accuracy, 
+            #    'loss:', loss
+            #)

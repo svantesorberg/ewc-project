@@ -2,14 +2,14 @@ from model import EWC_Network
 import tensorflow as tf
 import numpy as np
 
-print(tf.version)
+EPOCHS = 5
 
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
 vec_len = 28*28
 
-x_train90 = np.rot90(x_train, axes=(1,2))
-x_test90 = np.rot90(x_test, axes=(1,2))
+x_train90 = np.rot90(x_train, axes=(1,2), k=2)
+x_test90 = np.rot90(x_test, axes=(1,2), k=2)
 
 x_train90 = x_train90.reshape(x_train90.shape[0], vec_len) / 255.0
 x_test90 = x_test90.reshape(x_test90.shape[0], vec_len) / 255.0
@@ -19,7 +19,7 @@ x_test = x_test.reshape(x_test.shape[0], vec_len) / 255.0
 
 n_classes = len(np.unique(np.append(y_train, y_test)))
 
-net = EWC_Network(1, 64, x_train.shape[1:], len(np.unique(np.append(y_train, y_test))))
+net = EWC_Network(EPOCHS, 64, x_train.shape[1:], len(np.unique(np.append(y_train, y_test))))
 
 y_train = tf.keras.utils.to_categorical(y_train, n_classes)
 y_test = tf.keras.utils.to_categorical(y_test, n_classes)
