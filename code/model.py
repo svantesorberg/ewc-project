@@ -72,8 +72,8 @@ class EWC_Network():
         for i, layer in enumerate(self.model.layers):
 
             # TESTING
-            layer.kernel_regularizer.set_constant(400)
-            layer.bias_regularizer.set_constant(400)
+            layer.kernel_regularizer.set_constant(200)
+            layer.bias_regularizer.set_constant(200)
 
             # Update weight parameters
             new_parameters = task['trained_parameters'][2*i]
@@ -85,7 +85,7 @@ class EWC_Network():
             new_parameters = task['trained_parameters'][2*i + 1]
             new_fisher = task['fisher_diagonal'][2*i + 1]
             layer.bias_regularizer.add_new_parameters(new_parameters)
-            layer.kernel_regularizer.add_new_fisher_diagonal(new_fisher)
+            layer.bias_regularizer.add_new_fisher_diagonal(new_fisher)
     
 
     # Build a fully connected network with two hidden layers
@@ -94,14 +94,14 @@ class EWC_Network():
         self.model = tf.keras.models.Sequential([
             tf.keras.layers.Input(shape=self.input_shape, name='input'),
             tf.keras.layers.Dense(
-                400, 
+                600, 
                 activation='relu',
                 bias_regularizer=self.EWC_Regularizer(),
                 kernel_regularizer=self.EWC_Regularizer(),
                 name='fc1'
             ),
             tf.keras.layers.Dense(
-                400, 
+                600, 
                 activation='relu', 
                 bias_regularizer=self.EWC_Regularizer(),
                 kernel_regularizer=self.EWC_Regularizer(), 
@@ -123,15 +123,15 @@ class EWC_Network():
 
     def _compile_model(self):
         self.model.compile(
-            # optimizer=tf.keras.optimizers.Adam(
-            #     learning_rate=self.learning_rate
-            # ),
-            optimizer = tf.keras.optimizers.RMSprop(
+            optimizer=tf.keras.optimizers.Adam(
                 learning_rate=self.learning_rate
             ),
-            #optimizer = tf.keras.optimizers.SGD(
+            # optimizer = tf.keras.optimizers.RMSprop(
+            #     learning_rate=self.learning_rate
+            # ),
+            # optimizer = tf.keras.optimizers.SGD(
             #    learning_rate=self.learning_rate
-            #),
+            # ),
             loss='categorical_crossentropy',
             metrics=['accuracy']
         )
@@ -158,38 +158,43 @@ class EWC_Network():
             
             task['trained_parameters'] = self.model.get_weights()
 
-            # Fisher Matrix 
-            print('\nComputing empirical Fisher - this may take a while')
+            # Fisher Matrix by sum
+            # print('\nComputing empirical Fisher - this may take a while')
 
-            sums = [np.zeros(shape=(784, 400)), np.zeros(shape=(400,)), np.zeros(shape=(400, 400)), np.zeros(shape=(400,)), np.zeros(shape=(400, 10)), np.zeros(shape=(10,))]
-
-            #for i in range(task['X_train'].shape[0]):
-            for i in range(0, task['X_train'].shape[0], 1):
-                progress = round(i / task['X_train'].shape[0] * 100)
-                print('\r[{0}{1}] {2}%'.format('#'*int(progress/10), ' '*(10 - int(progress/10)), progress), end='')
-                data = np.array([task['X_train'][i]])
-                labels = np.array([task['Y_train'][i]])
+            # sums = [np.zeros(shape=(784, 800)), np.zeros(shape=(800,)), np.zeros(shape=(800, 800)), np.zeros(shape=(800,)), np.zeros(shape=(800, 10)), np.zeros(shape=(10,))]
+            # for i in range(0, task['X_train'].shape[0], 10):
+            #     progress = round(i / task['X_train'].shape[0] * 100)
+            #     print('\r[{0}{1}] {2}%'.format('#'*int(progress/10), ' '*(10 - int(progress/10)), progress), end='')
+            #     data = np.array([task['X_train'][i]])
+            #     labels = np.array([task['Y_train'][i]])
 
 
 
-                with tf.GradientTape() as tape:
-                    tape.watch(self.model.trainable_weights)
-                    predictions = self.model(data)
-                    loss = tf.keras.losses.categorical_crossentropy(labels, predictions)
-                grads = tape.gradient(loss, self.model.trainable_weights)
-                squared_gradients = list(map(tf.square, grads))
+            #     with tf.GradientTape() as tape:
+            #         tape.watch(self.model.trainable_weights)
+            #         predictions = self.model(data)
+            #         loss = tf.keras.losses.categorical_crossentropy(labels, predictions)
+            #     grads = tape.gradient(loss, self.model.trainable_weights)
+            #     squared_gradients = list(map(tf.square, grads))
 
-                for j in range(len(sums)):
-                    sums[j] = sums[j] + squared_gradients[j]
+            #     for j in range(len(sums)):
+            #         sums[j] = sums[j] + squared_gradients[j]
 
-                #print(list(map(lambda x: x.shape, squared_gradients)))
+            # task['fisher_diagonal'] = sums
+            # print(' Done!')
             
-            #squared_gradients = list(map(lambda x: x / (60000 / 180), squared_gradients))
-            #grads = list(map(lambda x: x.numpy(), grads))
-            
-            task['fisher_diagonal'] = sums #squared_gradients
-            
-            print(' Done!')
+            # Fisher matrix by single batch
+            data = task['X_train']
+            labels = task['Y_train']
+            with tf.GradientTape() as tape:
+                tape.watch(self.model.trainable_weights)
+                predictions = self.model(data)
+                loss = tf.keras.losses.categorical_crossentropy(labels, predictions)
+            grads = tape.gradient(loss, self.model.trainable_weights)
+
+            squared_gradients = list(map(lambda x: x**2, grads))
+            task['fisher_diagonal'] = squared_gradients
+
             # After model has been trained, we need to recompile it
             # in order to use the updated the regularization function
             self.update_regularization_functions(task)

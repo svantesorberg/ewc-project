@@ -2,7 +2,7 @@ from model import EWC_Network
 import tensorflow as tf
 import numpy as np
 
-EPOCHS = 10
+EPOCHS = 3
 
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
@@ -39,7 +39,7 @@ print(x_train_permutation2.shape)
 
 n_classes = len(np.unique(np.append(y_train, y_test)))
 
-net = EWC_Network(EPOCHS, 64, x_train_original.shape[1:], len(np.unique(np.append(y_train, y_test))))
+net = EWC_Network(EPOCHS, 128, x_train_original.shape[1:], len(np.unique(np.append(y_train, y_test))))
 
 y_train = tf.keras.utils.to_categorical(y_train, n_classes)
 y_test = tf.keras.utils.to_categorical(y_test, n_classes)
@@ -68,5 +68,9 @@ net.add_task(
     name='Permuted MNIST 2'
 )
 
-net._train_model()
+net._train_model([0])
+net.evaluate()
+net._train_model([1])
+net.evaluate()
+net._train_model([2])
 net.evaluate()
