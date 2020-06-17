@@ -33,20 +33,28 @@ class EWC_Network():
         def __init__(self, constant = 1):
             self.constant = constant
             self.trained_parameters_per_task = []
+            self.fisher_diagonal_per_task = []
         
         def __call__(self, weights):
             penalty = 0
             
             #tf.print(self.trained_parameters_per_task)
-            for params in self.trained_parameters_per_task:
-                penalty += self.constant * tf.reduce_sum(tf.square(weights - params)) # Just a placeholder
-            
+            for params, fisher in zip(self.trained_parameters_per_task, self.fisher_diagonal_per_task):
+                penalty += (
+                    (self.constant / 2) * tf.reduce_sum(
+                        tf.multiply(fisher, tf.square(weights - params))
+                    )
+                )
+
             return penalty
 
         # Add new parameters to the vector, used when a new task
         # has been learned
         def add_new_parameters(self, parameters):
             self.trained_parameters_per_task.append(parameters)
+
+        def add_new_fisher_diagonal(self, fisher):
+            self.fisher_diagonal_per_task.append(fisher)
 
         def get_constant(self):
             return self.constant
@@ -56,23 +64,26 @@ class EWC_Network():
         
         
 
-    def update_regularization_functions(self):
+    def update_regularization_functions(self, task):
         # Updates the regularization functions for each layer,
         # adding learned parameters for the most recently learned task
         for i, layer in enumerate(self.model.layers):
 
             # TESTING
-            layer.kernel_regularizer.set_constant(0.05)
-            layer.bias_regularizer.set_constant(0.05)
+            layer.kernel_regularizer.set_constant(400)
+            layer.bias_regularizer.set_constant(400)
 
             # Update weight parameters
-            new_parameters = self.tasks[-1]['trained_parameters'][2*i]
+            new_parameters = task['trained_parameters'][2*i]
+            new_fisher = task['fisher_diagonal'][2*i]
             layer.kernel_regularizer.add_new_parameters(new_parameters)
+            layer.kernel_regularizer.add_new_fisher_diagonal(new_fisher)
 
             # Update bias parameters
-            new_parameters = self.tasks[-1]['trained_parameters'][2*i + 1]
+            new_parameters = task['trained_parameters'][2*i + 1]
+            new_fisher = task['fisher_diagonal'][2*i + 1]
             layer.bias_regularizer.add_new_parameters(new_parameters)
-        
+            layer.kernel_regularizer.add_new_fisher_diagonal(new_fisher)
     
 
     # Build a fully connected network with two hidden layers
@@ -110,9 +121,15 @@ class EWC_Network():
 
     def _compile_model(self):
         self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(
+            # optimizer=tf.keras.optimizers.Adam(
+            #     learning_rate=self.learning_rate
+            # ),
+            optimizer = tf.keras.optimizers.RMSprop(
                 learning_rate=self.learning_rate
             ),
+            #optimizer = tf.keras.optimizers.SGD(
+            #    learning_rate=self.learning_rate
+            #),
             loss='categorical_crossentropy',
             metrics=['accuracy']
         )
@@ -138,9 +155,26 @@ class EWC_Network():
             )
             
             task['trained_parameters'] = self.model.get_weights()
+
+            # Fisher Matrix 
+            print('--------------')
+            print('Computing gradients')
+            with tf.GradientTape() as outer_tape:
+                outer_tape.watch(self.model.trainable_weights)
+                with tf.GradientTape() as inner_tape:
+                    inner_tape.watch(self.model.trainable_weights)
+                    predictions = self.model(task['X_train'])
+                    loss = tf.keras.losses.categorical_crossentropy(task['Y_train'], predictions)
+                grads = inner_tape.gradient(loss, self.model.trainable_weights)
+            second_derivative = outer_tape.gradient(grads, self.model.trainable_weights)
+            #grads = list(map(lambda x: x.numpy(), grads))
+            #squared_gradients = list(map(tf.square, grads))
+            #task['fisher_diagonal'] = squared_gradients
+            task['fisher_diagonal'] = list(map(tf.abs, second_derivative))
+            print('--------------')
             # After model has been trained, we need to recompile it
             # in order to use the updated the regularization function
-            self.update_regularization_functions()
+            self.update_regularization_functions(task)
             self._compile_model()
 
     def add_task(

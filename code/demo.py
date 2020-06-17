@@ -8,8 +8,8 @@ EPOCHS = 5
 
 vec_len = 28*28
 
-x_train90 = np.rot90(x_train, axes=(1,2), k=2)
-x_test90 = np.rot90(x_test, axes=(1,2), k=2)
+x_train90 = np.rot90(x_train, axes=(1,2), k=1)
+x_test90 = np.rot90(x_test, axes=(1,2), k=1)
 
 x_train90 = x_train90.reshape(x_train90.shape[0], vec_len) / 255.0
 x_test90 = x_test90.reshape(x_test90.shape[0], vec_len) / 255.0
@@ -25,9 +25,10 @@ y_train = tf.keras.utils.to_categorical(y_train, n_classes)
 y_test = tf.keras.utils.to_categorical(y_test, n_classes)
 
 
+
+
+net.add_task(x_train90, y_train, x_test90, y_test, name='Rotated MNIST')
 net.add_task(x_train, y_train, x_test, y_test, name='MNIST')
 net._train_model()
-net.add_task(x_train90, y_train, x_test90, y_test, name='Rotated MNIST')
-net._train_model(task_ids=[1])
 
 net.evaluate()
