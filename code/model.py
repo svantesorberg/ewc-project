@@ -12,7 +12,7 @@ class EWC_Network():
         batch_size, 
         input_shape, 
         n_classes, 
-        learning_rate = 5e-4
+        learning_rate = 1e-3
     ):
         self.tasks = []                         # Info/data for the tasks
         self.n_epochs = n_epochs                # Epochs used in training
@@ -71,8 +71,8 @@ class EWC_Network():
         for i, layer in enumerate(self.model.layers):
 
             # TESTING
-            layer.kernel_regularizer.set_constant(1)
-            layer.bias_regularizer.set_constant(1)
+            layer.kernel_regularizer.set_constant(0.1)
+            layer.bias_regularizer.set_constant(0.1)
 
             # Update weight parameters
             new_parameters = task['trained_parameters'][2*i]

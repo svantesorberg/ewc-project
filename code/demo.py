@@ -2,8 +2,8 @@ from model import EWC_Network
 import tensorflow as tf
 import numpy as np
 
-EPOCHS = 20
-DATASETS = 6
+EPOCHS = 5
+DATASETS = 5
 SEEDS = [42, 1337, 69, 420, 69420, 42069, 7331, 96, 42069420, 6969]
 
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
