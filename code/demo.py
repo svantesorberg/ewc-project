@@ -2,7 +2,7 @@ from model import EWC_Network
 import tensorflow as tf
 import numpy as np
 
-EPOCHS = 5
+EPOCHS = 1
 
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
@@ -28,7 +28,9 @@ y_test = tf.keras.utils.to_categorical(y_test, n_classes)
 
 
 net.add_task(x_train90, y_train, x_test90, y_test, name='Rotated MNIST')
-net.add_task(x_train, y_train, x_test, y_test, name='MNIST')
 net._train_model()
+net.evaluate()
+net.add_task(x_train, y_train, x_test, y_test, name='MNIST')
+net._train_model(task_ids=[1])
 
 net.evaluate()

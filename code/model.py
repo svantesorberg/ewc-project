@@ -12,7 +12,7 @@ class EWC_Network():
         batch_size, 
         input_shape, 
         n_classes, 
-        learning_rate = 1e-3
+        learning_rate = 5e-5
     ):
         self.tasks = []                         # Info/data for the tasks
         self.n_epochs = n_epochs                # Epochs used in training
@@ -45,7 +45,7 @@ class EWC_Network():
                         tf.multiply(fisher, tf.square(weights - params))
                     )
                 )
-
+            #tf.print(penalty)
             return penalty
 
         # Add new parameters to the vector, used when a new task
@@ -159,18 +159,34 @@ class EWC_Network():
             # Fisher Matrix 
             print('--------------')
             print('Computing gradients')
-            with tf.GradientTape() as outer_tape:
-                outer_tape.watch(self.model.trainable_weights)
-                with tf.GradientTape() as inner_tape:
-                    inner_tape.watch(self.model.trainable_weights)
-                    predictions = self.model(task['X_train'])
-                    loss = tf.keras.losses.categorical_crossentropy(task['Y_train'], predictions)
-                grads = inner_tape.gradient(loss, self.model.trainable_weights)
-            second_derivative = outer_tape.gradient(grads, self.model.trainable_weights)
+
+            sums = [np.zeros(shape=(784, 400)), np.zeros(shape=(400,)), np.zeros(shape=(400, 400)), np.zeros(shape=(400,)), np.zeros(shape=(400, 10)), np.zeros(shape=(10,))]
+
+            #for i in range(task['X_train'].shape[0]):
+            for i in range(0, task['X_train'].shape[0], 180):
+                #print('... for input', i)
+                data = np.array([task['X_train'][i]])
+                labels = np.array([task['Y_train'][i]])
+
+
+
+                with tf.GradientTape() as tape:
+                    tape.watch(self.model.trainable_weights)
+                    predictions = self.model(data)
+                    loss = -tf.keras.losses.categorical_crossentropy(labels, predictions)
+                grads = tape.gradient(loss, self.model.trainable_weights)
+                squared_gradients = list(map(tf.square, grads))
+
+                for j in range(len(sums)):
+                    sums[j] = sums[j] + squared_gradients[j]
+
+                #print(list(map(lambda x: x.shape, squared_gradients)))
+            
+            squared_gradients = list(map(lambda x: x / (60000 / 180), squared_gradients))
             #grads = list(map(lambda x: x.numpy(), grads))
-            #squared_gradients = list(map(tf.square, grads))
-            #task['fisher_diagonal'] = squared_gradients
-            task['fisher_diagonal'] = list(map(tf.abs, second_derivative))
+            
+            task['fisher_diagonal'] = squared_gradients
+            
             print('--------------')
             # After model has been trained, we need to recompile it
             # in order to use the updated the regularization function
