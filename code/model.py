@@ -12,7 +12,7 @@ class EWC_Network():
         batch_size, 
         input_shape, 
         n_classes, 
-        learning_rate = 1e-3
+        learning_rate = 5e-4
     ):
         self.tasks = []                         # Info/data for the tasks
         self.n_epochs = n_epochs                # Epochs used in training
@@ -38,7 +38,6 @@ class EWC_Network():
         def __call__(self, weights):
             penalty = 0
             
-            #tf.print(self.trained_parameters_per_task)
             for params, fisher in zip(
                 self.trained_parameters_per_task, self.fisher_diagonal_per_task
             ):
@@ -47,7 +46,7 @@ class EWC_Network():
                         tf.multiply(fisher, tf.square(weights - params))
                     )
                 )
-            #tf.print(penalty)
+
             return penalty
 
         # Add new parameters to the vector, used when a new task
@@ -72,8 +71,8 @@ class EWC_Network():
         for i, layer in enumerate(self.model.layers):
 
             # TESTING
-            layer.kernel_regularizer.set_constant(200)
-            layer.bias_regularizer.set_constant(200)
+            layer.kernel_regularizer.set_constant(1)
+            layer.bias_regularizer.set_constant(1)
 
             # Update weight parameters
             new_parameters = task['trained_parameters'][2*i]
@@ -123,12 +122,12 @@ class EWC_Network():
 
     def _compile_model(self):
         self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(
-                learning_rate=self.learning_rate
-            ),
-            # optimizer = tf.keras.optimizers.RMSprop(
+            # optimizer=tf.keras.optimizers.Adam(
             #     learning_rate=self.learning_rate
             # ),
+            optimizer = tf.keras.optimizers.RMSprop(
+                learning_rate=self.learning_rate
+            ),
             # optimizer = tf.keras.optimizers.SGD(
             #    learning_rate=self.learning_rate
             # ),
@@ -147,14 +146,17 @@ class EWC_Network():
             # Safety check - ensure nobody has messed around with task ordering
             assert(task_id == task['meta']['id']) 
 
-            print('Training on task', get_name_or_id(task))
+            print('Training on', get_name_or_id(task), end='...', flush=True)
 
             self.model.fit(
                 task['X_train'], 
                 task['Y_train'],
                 epochs = self.n_epochs,
-                batch_size=self.batch_size
+                batch_size=self.batch_size,
+                verbose=False
             )
+
+            print('\rTraining on', get_name_or_id(task), 'done!')
             
             task['trained_parameters'] = self.model.get_weights()
 
@@ -225,9 +227,9 @@ class EWC_Network():
         })
 
 
-        print(
-            'Successfully added task', get_name_or_id(self.tasks[-1])
-        )
+        # print(
+        #     'Successfully added', get_name_or_id(self.tasks[-1])
+        # )
 
 
     # Simple evaluation of performance on specified tasks
@@ -235,13 +237,22 @@ class EWC_Network():
         if not task_ids:
             task_ids = [i for i in range(len(self.tasks))]
         
+        print('\n##########################################')
+        print('Evaluating all tasks\n')
+
         for task_id in task_ids:
             task=self.tasks[task_id]
             assert(task_id == task['meta']['id'])
-            print('Evaluating task', get_name_or_id(task))
-            loss, accuracy = self.model.evaluate(task['X_test'], task['Y_test'])
-            #print(
-            #    'Task', get_name_or_id(task), 
-            #    'test accuracy:', accuracy, 
-            #    'loss:', loss
-            #)
+            print('Evaluating', get_name_or_id(task), end='...\n')
+            loss, accuracy = self.model.evaluate(
+                task['X_test'], 
+                task['Y_test'], 
+                verbose=False
+            )
+            print(
+                '\taccuracy:', round(accuracy, 4)
+            )
+            print(
+                '\tloss:', round(loss, 4)
+            )
+        print('##########################################\n')

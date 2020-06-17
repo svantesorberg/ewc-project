@@ -12,4 +12,4 @@ def get_name_or_id(task):
     if task['meta']['name']:
         return task['meta']['name']
     else:
-        return task['meta']['id']
+        return 'task ' + task['meta']['id']
