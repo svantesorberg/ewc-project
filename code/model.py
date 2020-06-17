@@ -12,7 +12,7 @@ class EWC_Network():
         batch_size, 
         input_shape, 
         n_classes, 
-        learning_rate = 5e-5
+        learning_rate = 1e-3
     ):
         self.tasks = []                         # Info/data for the tasks
         self.n_epochs = n_epochs                # Epochs used in training
@@ -39,7 +39,9 @@ class EWC_Network():
             penalty = 0
             
             #tf.print(self.trained_parameters_per_task)
-            for params, fisher in zip(self.trained_parameters_per_task, self.fisher_diagonal_per_task):
+            for params, fisher in zip(
+                self.trained_parameters_per_task, self.fisher_diagonal_per_task
+            ):
                 penalty += (
                     (self.constant / 2) * tf.reduce_sum(
                         tf.multiply(fisher, tf.square(weights - params))
@@ -157,14 +159,14 @@ class EWC_Network():
             task['trained_parameters'] = self.model.get_weights()
 
             # Fisher Matrix 
-            print('--------------')
-            print('Computing gradients')
+            print('\nComputing empirical Fisher - this may take a while')
 
             sums = [np.zeros(shape=(784, 400)), np.zeros(shape=(400,)), np.zeros(shape=(400, 400)), np.zeros(shape=(400,)), np.zeros(shape=(400, 10)), np.zeros(shape=(10,))]
 
             #for i in range(task['X_train'].shape[0]):
-            for i in range(0, task['X_train'].shape[0], 180):
-                #print('... for input', i)
+            for i in range(0, task['X_train'].shape[0], 1):
+                progress = round(i / task['X_train'].shape[0] * 100)
+                print('\r[{0}{1}] {2}%'.format('#'*int(progress/10), ' '*(10 - int(progress/10)), progress), end='')
                 data = np.array([task['X_train'][i]])
                 labels = np.array([task['Y_train'][i]])
 
@@ -173,7 +175,7 @@ class EWC_Network():
                 with tf.GradientTape() as tape:
                     tape.watch(self.model.trainable_weights)
                     predictions = self.model(data)
-                    loss = -tf.keras.losses.categorical_crossentropy(labels, predictions)
+                    loss = tf.keras.losses.categorical_crossentropy(labels, predictions)
                 grads = tape.gradient(loss, self.model.trainable_weights)
                 squared_gradients = list(map(tf.square, grads))
 
@@ -182,12 +184,12 @@ class EWC_Network():
 
                 #print(list(map(lambda x: x.shape, squared_gradients)))
             
-            squared_gradients = list(map(lambda x: x / (60000 / 180), squared_gradients))
+            #squared_gradients = list(map(lambda x: x / (60000 / 180), squared_gradients))
             #grads = list(map(lambda x: x.numpy(), grads))
             
-            task['fisher_diagonal'] = squared_gradients
+            task['fisher_diagonal'] = sums #squared_gradients
             
-            print('--------------')
+            print(' Done!')
             # After model has been trained, we need to recompile it
             # in order to use the updated the regularization function
             self.update_regularization_functions(task)
