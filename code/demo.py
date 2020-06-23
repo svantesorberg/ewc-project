@@ -2,7 +2,11 @@ from model import EWC_Network
 import tensorflow as tf
 import numpy as np
 
-EPOCHS = 5
+from helpers import plot_random_images
+
+EPOCHS = 20
+BATCH_SIZE = 64
+
 DATASETS = 3
 SEEDS = [42, 1337, 69, 420, 69420, 42069, 7331, 96, 42069420, 6969]
 
@@ -38,12 +42,33 @@ for i in range(DATASETS - 1):
         )
     )
 
+#plot_random_images(datasets[0][0].reshape((60000, 28, 28)))
+
 n_classes = len(np.unique(np.append(y_train, y_test)))
 
-net = EWC_Network(EPOCHS, 32, x_train_original.shape[1:], len(np.unique(np.append(y_train, y_test))))
+net = EWC_Network(EPOCHS, BATCH_SIZE, x_train_original.shape[1:], len(np.unique(np.append(y_train, y_test))))
 
 y_train = tf.keras.utils.to_categorical(y_train, n_classes)
 y_test = tf.keras.utils.to_categorical(y_test, n_classes)
+
+# (fashion_train, fashion_train_label), (fashion_test, fashion_test_label) = tf.keras.datasets.fashion_mnist.load_data()
+
+# fashion_test = fashion_test.reshape(fashion_test.shape[0], 28, 28, 1) / 255.0
+# fashion_train = fashion_train.reshape(fashion_train.shape[0], 28, 28, 1) / 255.0
+# fashion_train_label = tf.keras.utils.to_categorical(fashion_train_label, n_classes)
+# fashion_test_label = tf.keras.utils.to_categorical(fashion_test_label, n_classes)
+
+
+
+# net.add_task(
+#     fashion_train,
+#     fashion_train_label,
+#     fashion_test,
+#     fashion_test_label,
+#     name = 'Fashion MNIST'
+# )
+# net._train_model([0])
+# net.evaluate()
 
 net.add_task(
         x_train_original, 

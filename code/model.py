@@ -20,7 +20,7 @@ class EWC_Network():
         n_classes, 
         learning_rate = 1e-4,
         gradient_batch_size = 1,
-        ewc_lambda = 800 # Tune this
+        ewc_lambda = 5000 # Tune this
     ):
         self.tasks = []                         # Info/data for the tasks
         self.n_epochs = n_epochs                # Epochs used in training
@@ -115,36 +115,27 @@ class EWC_Network():
             tf.keras.layers.Input(shape=(28, 28, 1), name='input'),
             tf.keras.layers.Conv2D(
                 64, 
-                (3, 3),
+                (2, 2),
                 padding='same',
                 bias_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda),
                 kernel_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda),
                 activation='relu',
                 name='conv1-1'
             ),
-            tf.keras.layers.Conv2D(
-                64, 
-                (3, 3),
-                padding='same',
-                bias_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda),
-                kernel_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda),
-                activation='relu',
-                name='conv1-2'
-            ),
-            tf.keras.layers.MaxPool2D(
+            tf.keras.layers.MaxPooling2D(
                 pool_size=(2,2),
-                strides=(2,2)
+                name='pool1'
             ),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(
-                300, 
+                1024, 
                 activation='relu',
                 bias_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda),
                 kernel_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda),
                 name='fc1'
             ),
             tf.keras.layers.Dense(
-                300, 
+                1024, 
                 activation='relu', 
                 bias_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda),
                 kernel_regularizer=self.EWC_Regularizer(constant=self.ewc_lambda), 
