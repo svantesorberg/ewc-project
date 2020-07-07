@@ -62,12 +62,13 @@ model = tf.keras.models.Sequential([
         activation='relu',
         name='fc1'
     ),
+    tf.keras.layers.Dropout(rate=0.5),
     tf.keras.layers.Dense(
         1024, 
         activation='relu', 
         name='fc2'
     ),
-    tf.keras.layers.Dropout(rate=0.4),
+    tf.keras.layers.Dropout(rate=0.5),
     tf.keras.layers.Dense(
         n_classes, 
         activation='softmax',
