@@ -1,10 +1,12 @@
 from model import EWC_Network
+from permute_mnist import get_permuted_dataset
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 
 from helpers import plot_random_images
 
-EPOCHS = 20
+EPOCHS = 30
 BATCH_SIZE = 64
 
 DATASETS = 3
@@ -12,10 +14,10 @@ SEEDS = [42, 1337, 69, 420, 69420, 42069, 7331, 96, 42069420, 6969]
 
 (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
 
+
+
 x_train = x_train.reshape(x_train.shape[0], 28, 28, 1)
 x_test = x_test.reshape(x_test.shape[0], 28, 28, 1)
-input_shape = (28, 28, 1)
-vec_len = 28*28
 
 #x_train90 = np.rot90(x_train, axes=(1,2), k=1)
 #x_test90 = np.rot90(x_test, axes=(1,2), k=1)
@@ -26,49 +28,63 @@ vec_len = 28*28
 #x_test_original = x_test.reshape(x_test.shape[0], vec_len) / 255.0
 x_train_original = x_train / 255.0
 x_test_original = x_test / 255.0
+input_shape = x_train_original.shape[1:]
+n_classes = len(np.unique(np.append(y_train, y_test)))
 
 datasets = [(x_train_original, x_test_original)]
 
 # Create n - 1 permutations
 for i in range(DATASETS - 1):
-    perm = np.random.RandomState(SEEDS[i]).permutation(vec_len)
-
-    temp_train = x_train_original.reshape(x_train_original.shape[0], vec_len)
-    temp_test = x_test_original.reshape(x_test_original.shape[0], vec_len)
     datasets.append(
-        (
-            np.array([x[perm].reshape(input_shape) for x in temp_train]),
-            np.array([x[perm].reshape(input_shape) for x in temp_test])
-        )
+        get_permuted_dataset(x_train_original, x_test_original, seed=SEEDS[i])
     )
 
 #plot_random_images(datasets[0][0].reshape((60000, 28, 28)))
 
 n_classes = len(np.unique(np.append(y_train, y_test)))
 
-net = EWC_Network(EPOCHS, BATCH_SIZE, x_train_original.shape[1:], len(np.unique(np.append(y_train, y_test))))
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Input(shape=input_shape, name='input'),
+    tf.keras.layers.Conv2D(
+        64, 
+        (3, 3),
+        padding='same',
+        activation='relu',
+        name='conv1-1'
+    ),
+    tf.keras.layers.MaxPooling2D(
+        pool_size=(2,2),
+        name='pool1'
+    ),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(
+        1024, 
+        activation='relu',
+        name='fc1'
+    ),
+    tf.keras.layers.Dense(
+        1024, 
+        activation='relu', 
+        name='fc2'
+    ),
+    tf.keras.layers.Dropout(rate=0.4),
+    tf.keras.layers.Dense(
+        n_classes, 
+        activation='softmax',
+        name='output')
+])
+
+
+net = EWC_Network(  model, 
+                    EPOCHS, 
+                    BATCH_SIZE, 
+                    input_shape, 
+                    n_classes, 
+                    num_tasks_to_remember=1
+)
 
 y_train = tf.keras.utils.to_categorical(y_train, n_classes)
 y_test = tf.keras.utils.to_categorical(y_test, n_classes)
-
-# (fashion_train, fashion_train_label), (fashion_test, fashion_test_label) = tf.keras.datasets.fashion_mnist.load_data()
-
-# fashion_test = fashion_test.reshape(fashion_test.shape[0], 28, 28, 1) / 255.0
-# fashion_train = fashion_train.reshape(fashion_train.shape[0], 28, 28, 1) / 255.0
-# fashion_train_label = tf.keras.utils.to_categorical(fashion_train_label, n_classes)
-# fashion_test_label = tf.keras.utils.to_categorical(fashion_test_label, n_classes)
-
-
-
-# net.add_task(
-#     fashion_train,
-#     fashion_train_label,
-#     fashion_test,
-#     fashion_test_label,
-#     name = 'Fashion MNIST'
-# )
-# net._train_model([0])
-# net.evaluate()
 
 net.add_task(
         x_train_original, 
@@ -77,8 +93,6 @@ net.add_task(
         y_test, 
         name='MNIST'
 )
-net._train_model([0])
-net.evaluate()
 
 for i, dataset in enumerate(datasets[1:]):
     net.add_task(
@@ -89,8 +103,21 @@ for i, dataset in enumerate(datasets[1:]):
         name='Permuted MNIST ' + str(i+1)
     )
 
-for i in range(1, DATASETS):
-    net._train_model([i])
-    net.evaluate()
 
-#net.evaluate()
+net.train_model(record_history=True)
+history_list = net.get_history()
+
+net.evaluate()
+
+for i in range(DATASETS):
+    task_x = [j for j in range(EPOCHS*i + 1, EPOCHS*DATASETS + 1)]
+    task_y = history_list[i]['history']['accuracy']
+    plt.ylim((0.0, 1.0))
+    plt.plot(task_x, task_y)
+plt.show()
+# for i, history in enumerate(history_list): 
+#     task_x_values = 
+#     task
+
+
+

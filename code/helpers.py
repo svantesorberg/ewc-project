@@ -9,12 +9,6 @@ def one_hot_encode(data, nb_classes = None):
     targets = np.array(data).reshape(-1)
     return np.eye(nb_classes)[targets]
 
-def get_name_or_id(task):
-    if task['meta']['name']:
-        return task['meta']['name']
-    else:
-        return 'task ' + task['meta']['id']
-
 class MyPlot():
     def __init__(self,
                  nrows, 
