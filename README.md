@@ -1,2 +1,5 @@
-# ewc-project
-Implementation of Elastic Weight Consolidation in a neural network for a Bioinformatics course
+# EWC project
+Implementation of Elastic Weight Consolidation in a CNN for a 
+Bioinformatics course
+
+See [the report](report/) for more details.
