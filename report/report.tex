@@ -117,7 +117,7 @@
         For testing EWC, the MNIST dataset was used. To generate 
         multiple datasets of comparable difficulty, the dataset was 
         pixel-permuted, i.e. all pixels of the image shuffled without concern
-        for spacial locality: 
+        for spatial locality: 
 
         \begin{figure}[H]
             \includegraphics[width=0.49\textwidth]{figures/regular_mnist.png}
@@ -199,13 +199,13 @@
         \subsection*{Convolutional neural network \& pixel-permutations}
             One may question whether the pixel-permuted dataset is reasonable
             for evaluating a convolutional neural network. The purpose of the 
-            convolutional layers is to recognize and exploit spacial localities 
+            convolutional layers is to recognize and exploit spatial localities 
             in the images. These local features are certainly impacted by shuffling 
             all pixels randomly across the image. This topic is explored further,
             for example in \cite{ivan2019convolutional}.
             
             It might have been more reasonable to permute the MNIST dataset in a way 
-            that somewhat preserves spacially local features of the image. One 
+            that somewhat preserves spatially local features of the image. One 
             suggestion is to divide the images into (square) sub-images, e.g. 
             dividing the 28x28 image into 16 7x7 squares and permuting the 
             position of those squares within the image:
@@ -216,7 +216,7 @@
                 \caption{\textit{To the left, random images from the MNIST dataset. 
                 To the right, random images from an MNIST dataset where the 
                 7x7 sub-squares have swapped positions. Clearly this kind of 
-                permutation preserve some spacially local features such as lines,
+                permutation preserve some spatially local features such as lines,
                 but may divide them into several pieces and/or change their 
                 position within the image. N.b. the permuted images to the right 
                 are not permutations specifically of the images to the left.}}
