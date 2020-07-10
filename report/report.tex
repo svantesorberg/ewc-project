@@ -86,15 +86,17 @@
         The ''importance'' is given by the diagonal 
         of the \textit{Fisher Information Matrix} (FIM). Without getting into 
         details, the diagonal elements of the FIM for a task K, $F_{K,i}$ can be
-        approximated (in what is known as an Empirical Fisher Matrix) by 
+        approximated, in what is known as an Empirical Fisher Matrix, by the 
+        squared gradient of the loss function (log-likelihood) w.r.t. to the 
+        i:th weight $\theta_i$.
 
         \begin{equation*}
-            F_{A,i} = \left(\frac{\partial l(\boldsymbol{\theta})}{\partial \theta_i}\right)^2\quad
-            \text{where $\theta_i$ is the i:th weight and $l(\boldsymbol{\theta})$ is the loss function}
+            F_{K,i} = \frac{1}{n}\sum_{j = 1}^{n}{\left(\frac{\partial l(x_j, \boldsymbol{\theta})}{\partial \theta_i}\right)^2}\quad
+            \text{where $l(x_j, \boldsymbol{\theta})$ is the loss function for data point j}
         \end{equation*}
         
-        Clearly, if $\theta_i$ is important for task A, the gradient of the loss
-        (for task A) will be large (positive or negative) when taken w.r.t. 
+        Clearly, if $\theta_i$ is important for task K, the gradient of the loss
+        (for task K) will be large (positive or negative) when taken w.r.t. 
         $\theta_i$. The full regularization term can be written as 
 
         \begin{equation*}
