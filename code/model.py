@@ -1,7 +1,6 @@
 import tensorflow as tf
 import numpy as np
 import tensorflow.keras.backend as kb
-import multiprocessing
 import os
 import tempfile
 
