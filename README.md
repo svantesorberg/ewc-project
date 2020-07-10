@@ -12,5 +12,7 @@ help(). For example:
     >>> help(EWC_Network)
 ```
 
+Most of the magic happens in the [model.py](code/model.py) file.
+
 There are also two (very similar) demos, one using a 
 [fully connected NN](code/demo_nn.py) and one using a [CNN](code/demo_cnn.py).   
