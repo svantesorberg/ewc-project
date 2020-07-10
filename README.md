@@ -11,3 +11,6 @@ help(). For example:
     >>> from model import EWC_Network
     >>> help(EWC_Network)
 ```
+
+There are also two (very similar) demos, one using a 
+[fully connected NN](code/demo_nn.py) and one using a [CNN](code/demo_cnn.py).   
