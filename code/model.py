@@ -5,10 +5,6 @@ import multiprocessing
 import os
 import tempfile
 
-# FOR TESTING
-#np.random.seed(1337)
-#tf.random.set_seed(1337)
-
 class EWC_Network():
     """Use Elastic Weight Consolidation (EWC) in a Keras sequential model.
 
@@ -135,22 +131,28 @@ class EWC_Network():
         """Constructor for the EWC Network
 
             Parameters:
-                model:                  Sequential Keras model (not compiled)
+                model:                  Sequential Keras model (not compiled - 
+                                        it will be recompiled with ADAM 
+                                        optimizer and metrics = ['accuracy'])
                 n_epochs:               Number of epochs to train each task
                 batch_size:             Batch size used in training
-                num_tasks_to_remember:  Number old tasks to remember when 
-                                        training a new task (-1 for remembering 
-                                        everything)
-                learning_rate:          Learning rate used in training
-                gradient_batch_size:    Batch size used when computing the 
-                                        gradient used for the Empirical Fisher 
-                                        Matrix
                 ewc_lambda:             Constant multiplier used on the EWC 
                                         regularization term. Higher values mean
                                         an increased importance of remembering 
                                         old tasks compared to performing well
-                                        on new ones. This should be tuned to
+                                        on new ones. This should be tuned for
                                         the user's purposes.
+                learning_rate:          Learning rate used in training,
+                                        default 1e-4
+                num_tasks_to_remember:  Number old tasks to remember when 
+                                        training a new task (-1 for remembering 
+                                        everything, 0 for remembering nothing),
+                                        default -1.
+                
+                gradient_batch_size:    Batch size used when computing the 
+                                        gradient used for the Empirical Fisher 
+                                        Matrix, default 1.
+                
         """
         
         self.n_epochs = n_epochs                
@@ -431,7 +433,7 @@ class EWC_Network():
             for idx in self._ewc_layer_indexes
         }
 
-        # Perform 
+        # Compute gradient for each batch
         for i, (batch_data, batch_label) in enumerate(
             zip(data_split, label_split)
         ):
@@ -505,7 +507,7 @@ class EWC_Network():
             'Y_test': Y_test,           # Testing output
 
             'meta': {                   # Info unrelated to network
-                'id': len(self._tasks),  # Id of the task
+                'id': len(self._tasks), # Id of the task
                 'name': name            # Human-readable task name
             }
         })
